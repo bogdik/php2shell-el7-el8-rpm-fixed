@@ -101,7 +101,6 @@ php72-rpm-app/el8/          ← one version × one vendor × one OS
 php72-rpm-remi/el7/
 php82-rpm-remi/{el7,el8}/
 …
-AGENT-BUILD.md              ← how to author new build scripts
 REGRESSION-php2shell.md     ← lab results
 ```
 
@@ -150,7 +149,6 @@ Run `bash builder-updater.sh` on the target host to see which of these match wha
 - This is **not** a yum/dnf repository and **not** an official Remi/AppStream update channel. You install our RPMs from this tree (or rebuild them).
 - Closing chain A is the acceptance bar used in the regression. Other public chains were not used as pass/fail here; see the report.
 - Do not use these packages as a general “upgrade PHP” path across major versions — stay on the same stream you already run.
-- Agent/build conventions for new versions: [`AGENT-BUILD.md`](AGENT-BUILD.md). Per-package details: each `php*-rpm-*/README.md`.
 
 ---
 
