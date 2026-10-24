@@ -1,0 +1,30 @@
+PHP 5.6.40 port of the CVE-2026-109618 / CVE-2026-109619 bailout mitigation.
+
+Reference: php72-rpm/php-7.2-cve-2026-109618-109619.patch
+Tarball: php-5.6.40.tar.gz sha256 56fb9878d12fdd921f6a0897e919f4e980d930160e154cbde2cc6d9206a27cac
+
+The patch follows 5.6 types. There is no zend_string, no IS_UNDEF, and no PHP 7 zval layout. Handlers and http_globals are zval*. NULL is the empty value (startup already memsets http_globals to 0).
+
+What was ported
+- zend_mm_safe_error_ex(): vsnprintf into a 1024-byte buffer, fprintf to stderr, _exit(1). Cold and noreturn via ZEND_COLD / ZEND_NORETURN, which 5.6 did not define.
+- Memory-limit reporting (zend_mm_safe_error) no longer uses zend_try / zend_error_noreturn / zend_bailout. It calls the helper.
+- All six safe_address() overflow paths in zend_alloc.c, plus _safe_emalloc_string(), call the helper. Those are the 5.6 equivalents of the PHP 7 estrdup / huge-alloc overflow checks; 5.6 already funnels them through safe_address().
+- Allocator OOM exits (__zend_malloc, __zend_realloc, zend_mm_panic) use _exit so atexit handlers do not run.
+- sapi_deactivate() nulls the char* request_info fields immediately after efree (auth_user, auth_password, auth_digest, content_type_dup, current_user).
+- php_request_shutdown() sets PG(http_globals)[i] = NULL after zval_ptr_dtor and sets PG(modules_activated) = 0 at the end. The same NULL store is done in php_request_shutdown_for_hook(), which is a second 5.6 shutdown that dtors the same zval* array. modules_activated is cleared only in php_request_shutdown.
+- zend_llist_destroy() sets head and tail to NULL. Both fields exist.
+- After zend_objects_store_free_object_storage(), EG(error_handling) = EH_NORMAL and EG(exception) = NULL. At the end of shutdown_executor(), after the stacks and object store are destroyed, handlers are cleared again: the zval* handlers are set to NULL, the handler stacks are memset to 0, object_buckets is NULL, and top is 1. 5.6 has no shutdown_executor(fast_shutdown) argument. opcache fast shutdown is zend_accel_fast_shutdown() in ext/opcache/ZendAccelerator.c; it only sets CG(unclean_shutdown) and returns into shutdown_executor(), which then frees the object store. Clearing pointers there covers fast shutdown without skipping the destroy that the non-fast path still needs.
+- Session upload progress returns immediately (`|| 1`).
+- max_multipart_body_parts defaults to -1. The multipart parser keeps only Content-Disposition and Content-Type and ignores duplicates. Body-part count uses the same limit as the 7.2 patch (max_input_vars + max_file_uploads when the INI is negative). substring_conf() takes size_t and allocates with safe_emalloc(), so a wrapped length hits safe_address() and _exit. 5.6 emalloc(len + 1) does not check that wrap.
+- Integer-overflow checks that already longjmp in the 5.6 string core now call the helper: concat_function / add_string_to_string / add_char_to_string, ZVAL_STRING, the nine zend_API.c "String overflow" zend_error_noreturn sites, smart_str's INT_MAX check (used while rfc1867 accumulates headers), and Balloc()'s allocation failure.
+
+Skipped (no 5.6 equivalent, or not a bailout site in this tree)
+- array_init_singleton, zend_new_array_singleton, and the main/php_variables.c edits. 5.6 has no zend_new_array() and no packed array. Nested GPC values are still created with array_init().
+- Zend/zend_types.h HT_HASH_RESET SSE change. 5.6 zend_types.h is only integer typedefs. Hash buckets are reset with memset() in zend_hash_rehash(). There is no SSE store of HT_INVALID_IDX.
+- Zend/zend_string.h ZSTR_MAX_LEN, and the zend_vm_def.h / zend_vm_execute.h concat checks. 5.6 zend_string.h is the interned-string helper, not the PHP 7 zend_string type. VM concat opcodes call concat_function() / add_string_to_string(); those functions were patched instead of the generated executor.
+- Zend/zend_hash.c overflow zend_error_noreturn sites (zend_hash_check_size, packed grow, zend_hash_do_resize). 5.6 doubles the table only when `(nTableSize << 1) > 0` and otherwise refuses to grow. zend_hash_init() clamps nSize >= 0x80000000. Neither path calls zend_error_noreturn, so there is no bailout to replace. A new fatal on a full table would change a case that currently keeps running.
+- Zend/zend_multiply.h zend_safe_address_guarded() and zend_safe_addmult(). Those functions are not in 5.6. The guarded multiply is static safe_address() in zend_alloc.c, which is patched.
+- Zend/zend_strtod.c "Balloc() allocation exceeds list boundary" stays zend_error(E_ERROR). It is a range check, not the allocation-failure path the reference patch changes. The malloc-failure path now _exits.
+- ext/standard/string.c, url.c, and file.c "String size overflow" / "String overflow" calls. They are outside the allocator and outside the 7.2 reference diff. Other bailout sites stay.
+- SAPI-specific efree() of request_info strings (sapi/isapi, sapi/pi3web, sapi/phpdbg). The reference patch only nulls the fields freed in main/SAPI.c.
+- PHP 7 object-store fast_shutdown flag and ZVAL_UNDEF(&EG(user_error_handler)). 5.6 stores those handlers as zval* and clears them with NULL.

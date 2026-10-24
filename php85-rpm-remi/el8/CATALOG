@@ -1,0 +1,8 @@
+id=el8-remi-85
+os=el8
+family=remi
+label=remi php 8.5.12, upload_progress off
+package=php-common
+marker=/root/php85-el8-remi-build
+ready=RPMS/el8/remi/php85-rpm
+nevra_glob=php-common 8.5.12-*module_php.8.5.el8.remi*

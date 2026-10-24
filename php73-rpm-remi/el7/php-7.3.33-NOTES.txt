@@ -1,0 +1,103 @@
+PHP 7.3 port of the CVE-2026-109618 / CVE-2026-109619 bailout mitigation.
+
+One unified diff for both vanilla GitHub tag archives. Unpack to
+php-src-php-7.3.33 or php-src-php-7.3.20 and run from inside that directory:
+
+    patch -p1 --forward --batch
+
+Dry-run (`patch -p1 --dry-run --forward --batch`):
+
+- PHP 7.3.33 (tag php-7.3.33): exit 0. All 14 files checked. No rejects,
+  no fuzz, no line offset. Every hunk matched the 7.3.33 text.
+- PHP 7.3.20 (tag php-7.3.20): exit 0. No rejects, no fuzz. The same hunks
+  match. zend_vm_execute.h is the only file that reports an offset: its 17
+  hunks land at -2, +7, or +4 lines. Those shifts come from unrelated
+  executor edits between 7.3.20 and 7.3.33. The concat context is identical,
+  so patch does not fuzz.
+
+sha256 of php-7.3.33-cve-2026-109618-109619.patch:
+58015f811c4adf8157880a2935ad3212a1b71cbca4424b8cda665ba7803fc38b
+
+Files
+- Zend/zend_alloc.c
+- Zend/zend_alloc.h
+- Zend/zend_execute_API.c
+- Zend/zend_hash.c
+- Zend/zend_llist.c
+- Zend/zend_multiply.h
+- Zend/zend_string.h
+- Zend/zend_strtod.c
+- Zend/zend_vm_def.h
+- Zend/zend_vm_execute.h
+- ext/session/session.c
+- main/SAPI.c
+- main/main.c
+- main/rfc1867.c
+
+What was ported
+- zend_mm_safe_error_ex(): vsnprintf into a 1024-byte buffer, fprintf to
+  stderr, _exit(1). Declared in zend_alloc.h. zend_alloc.c includes
+  zend_execute.h so the filename and line come from the executor or the
+  compiler. zend_get_executed_filename_ex() and zend_get_compiled_filename()
+  already return zend_string* in 7.3.
+- The memory-limit reporter zend_mm_safe_error() no longer sets
+  heap->overflow, and it no longer calls zend_error_noreturn, zend_bailout,
+  or exit(1). It calls the helper. (void) heap keeps the signature.
+- Integer-overflow allocator paths call the helper: debug alloc size wrap,
+  huge-alloc new_size < size (this check exists in 7.3), _estrdup,
+  _estrndup, zend_strndup, both zend_safe_address_guarded and
+  zend_safe_addmult, and the three zend_hash.c "Possible integer overflow"
+  sites (zend_hash_check_size, packed grow, zend_hash_do_resize).
+- zend_mm_panic() and zend_out_of_memory() use _exit(1).
+- Balloc() malloc failure calls the helper. The "allocation exceeds list
+  boundary" path is left as zend_error.
+- sapi_deactivate() nulls auth_user, auth_password, auth_digest,
+  content_type_dup, and current_user immediately after efree.
+- php_request_shutdown() ZVAL_UNDEF's PG(http_globals) after zval_ptr_dtor,
+  and sets PG(modules_activated) = 0 at the end.
+- zend_llist_destroy() sets head and tail to NULL. zend_llist_clean()
+  already did that after calling destroy; destroy itself now clears them
+  so other callers do not keep dangling pointers.
+- Fast shutdown exists in 7.3 (shutdown_executor's `if (fast_shutdown)`
+  branch). It is ported. After zend_objects_store_free_object_storage(),
+  both paths set EG(error_handling) = EH_NORMAL and EG(exception) = NULL.
+  Inside the fast_shutdown branch, after zend_cleanup_internal_classes():
+  object_buckets = NULL, top = 1, ZVAL_UNDEF of the user error and
+  exception handlers, and memset of the three handler stacks. The non-fast
+  path still dtors and destroys those stacks. 7.4 places the handler clear
+  on the fast-shutdown side of an earlier gc branch; 7.3 has no such
+  branch, so the existing fast_shutdown block is the matching site.
+  7.3 has no zend_error_zstr_at and no zend_weakrefs_shutdown.
+- Session upload progress returns immediately. session.c does not use a
+  boolean `true` (the word appears only in a comment, and the file does not
+  include stdbool.h), so the condition is `|| 1`.
+- max_multipart_body_parts INI default is -1. Vanilla 7.3 has neither the
+  INI nor the counter. The parser keeps only Content-Disposition and
+  Content-Type and ignores duplicates. When the INI is negative, the part
+  limit is max_input_vars + max_file_uploads. Exceeding it warns and jumps
+  to fileupload_done. substring_conf() takes size_t.
+- Concat overflow is checked with ZSTR_MAX_LEN before zend_string_extend
+  and before the fast-path zend_string_alloc, in ZEND_CONCAT and
+  ZEND_FAST_CONCAT. The same guards are in zend_vm_def.h and every
+  generated specialization in zend_vm_execute.h (2+2 in the definition,
+  17+17 in the executor). Overflow calls the helper and therefore _exit.
+  7.3 has no ZSTR_MAX_LEN. It is added in Zend/zend_string.h
+  (ZSTR_MAX_OVERHEAD / ZSTR_MAX_LEN). zend_types.h is not modified.
+
+Skipped
+- array_init_singleton, zend_new_array_singleton, and main/php_variables.c.
+  7.3 keeps its own hash-table sizing. Zend/zend_API.h and Zend/zend_hash.h
+  are unchanged.
+- Zend/zend_types.h HT_HASH_RESET SSE change. Not ported.
+- Slow concat and rope, matching upstream 7.4. concat_function() is
+  unchanged. The FAST_CONCAT fallback that converts non-strings and then
+  calls zend_string_alloc is unchanged (1 site in zend_vm_def.h, 9 in
+  zend_vm_execute.h). ZEND_ROPE_INIT, ZEND_ROPE_ADD, and ZEND_ROPE_END are
+  unchanged, including zend_string_alloc(len, 0) in ROPE_END.
+- zend_hash.c "Nesting level too deep - recursive dependency?" stays
+  zend_error_noreturn. It is not an allocator overflow.
+- Other bailouts stay: VM bailout, timeout, soap, phar, and any
+  zend_error_noreturn that is not one of the allocator paths above.
+
+Not skipped for lack of a fast-shutdown branch: 7.3 has that branch, and
+the handler ZVAL_UNDEF plus the handler-stack memset are in it.

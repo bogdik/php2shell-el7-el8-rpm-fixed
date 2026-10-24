@@ -1,0 +1,8 @@
+id=el8-remi-73
+os=el8
+family=remi
+label=remi php 7.3.33
+package=php-common
+marker=/root/php73-el8-remi-build
+ready=RPMS/el8/remi/php73-rpm
+nevra_glob=php-common 7.3.33-*module_php.7.3.el8.remi*

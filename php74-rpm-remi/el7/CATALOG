@@ -1,0 +1,8 @@
+id=el7-remi-74
+os=el7
+family=remi
+label=remi php74
+package=php74-php-common
+marker=/root/php74-31
+ready=RPMS/el7/remi/php74-rpm
+nevra_glob=

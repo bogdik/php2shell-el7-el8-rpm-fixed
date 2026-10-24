@@ -1,0 +1,8 @@
+id=el8-remi-72
+os=el8
+family=remi
+label=remi php 7.2.34
+package=php-common
+marker=/root/php72-el8-remi-build
+ready=RPMS/el8/remi/php72-rpm
+nevra_glob=php-common 7.2.34-*module_php.7.2.el8.remi*

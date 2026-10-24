@@ -1,0 +1,8 @@
+id=el7-remi-84
+os=el7
+family=remi
+label=remi php84, 8.4.27-3, upload_progress off, portable
+package=php84-php-common
+marker=/root/php84-el7-build
+ready=RPMS/el7/remi/php84-rpm
+nevra_glob=php84-php-common 8.4.27-*.el7.remi*

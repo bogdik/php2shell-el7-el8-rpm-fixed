@@ -1,0 +1,8 @@
+id=el8-app-73
+os=el8
+family=app
+label=AppStream php 7.3.20
+package=php-common
+marker=/root/php73-el8-app-build
+ready=RPMS/el8/app/php73-rpm
+nevra_glob=php-common 7.3.20-*module?el8*

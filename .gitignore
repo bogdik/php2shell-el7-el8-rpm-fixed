@@ -1,0 +1,3 @@
+*.partial
+*~
+.DS_Store

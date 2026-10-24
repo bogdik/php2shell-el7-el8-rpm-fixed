@@ -1,0 +1,5 @@
+93fff1690398046c017c762796a5c76621e9bd4ace94f2cd00cda772f8c9f53b  build-php83-el7.sh
+96317fc1b559c1e26cba23f6b46e094ac762e4d8f0187aa24a4a4ad061c19273  php83-el7.spec.patch
+135972dfaa447dd1cb1effacb968071b0ec942213c8a997963f4b249c16f629b  php-8.3.36-ffi-strncmp.patch
+b68e31af8783ac32d46aca567593b99b2e239ba40249fded859c206efb822407  php-8.3.36-openssl-asn1.patch
+df20bbedf089fcc8c15fa066bc1fe7b6ca805c398c52cd3a0e7c58621de1a18b  php-8.3.36-upload-progress-off.patch

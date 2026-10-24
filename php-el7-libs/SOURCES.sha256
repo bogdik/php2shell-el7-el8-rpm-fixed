@@ -1,0 +1,11 @@
+# Pinned upstream digests. Library hashes were checked against two official
+# origins (or an upstream checksum file plus the tarball). Remi SRPM hashes are
+# the files whose ed25519 signatures verify with RPM-GPG-KEY-remi2026
+# fingerprint 2E375FE24EDFF0F2E0D8E165ED5B58C5BEFA00E2.
+9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23  zlib-1.3.1.tar.gz
+60d74a257d1ccec0475e749cba2f21559e48139efba6ff28224357c7c798dfee  libxml2-2.9.14.tar.xz
+16c62a9c4af0f703d28bda6d7bbf37ba47055ad3414d70dec63e2e6336f2a82d  curl-8.4.0.tar.xz
+67d3fe6d268e6eaddcae3727fce58fcc8e9c53869bdd07a0c61e38ddf2965071  sqlite-autoconf-3460100.tar.gz
+94a4b2528372458e5662c18d406629266667c437198160a18cdfd2c4a4d6eee9  postgresql-10.23.tar.bz2
+fdae719830dcebf6bdad9ab580b9705a1bb43ca04e4a2f5cc9fecabcb356a469  php-8.4.27-1.remi.src.rpm
+46076efe6accac10e8d5fc40e2f22ad88e8c80bb1e8d011ab0f532825f8e923b  php-8.5.12-1.remi.src.rpm

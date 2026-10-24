@@ -1,0 +1,67 @@
+--- a/php.spec
++++ b/php.spec
+@@ -10,6 +10,10 @@
+ #
+ %if 0%{?scl:1}
+ %scl_package php
++# Remi installs config and state outside the SCL root. %scl_package sets the
++# stock SCL paths, and a later %global replaces them.
++%global _sysconfdir /etc/opt/%{scl_vendor}/%{scl}
++%global _localstatedir /var/opt/%{scl_vendor}/%{scl}
+ %else
+ %global pkg_name          %{name}
+ %global _root_sysconfdir  %{_sysconfdir}
+@@ -204,6 +208,12 @@
+ Patch48: php-8.3.0-openssl-ec-param.patch
+ # Fix libidobc headers path
+ Patch49: php-8.2.0-iodbc.patch
++# glibc _FORTIFY_SOURCE defines strncmp() as a macro; ZEND_STRL hides the comma
++Patch50: php-8.3.36-ffi-strncmp.patch
++# OpenSSL 1.0.2: ASN1_STRING_get0_data shim is static in openssl.c
++Patch51: php-8.3.36-openssl-asn1.patch
++# Official 8.3.36 still runs the upload-progress callback and stores the filename.
++Patch52: php-8.3.36-upload-progress-off.patch
+ 
+ # RC Patch
+ Patch91: php-7.2.0-oci8conf.patch
+@@ -603,7 +611,7 @@
+ %if %{with iodbc}
+ BuildRequires: pkgconfig(libiodbc)
+ %else
+-BuildRequires: pkgconfig(odbc)
++BuildRequires: unixODBC-devel
+ %endif
+ 
+ %description odbc
+@@ -748,7 +756,7 @@
+ Requires: %{?scl_prefix}php-common%{?_isa} = %{version}-%{release}
+ %if %{with libgd}
+ %if 0%{?rhel}
+-BuildRequires: gd3php-devel >= 2.3.3
++BuildRequires: pkgconfig(gdlib) >= 2.3.3
+ %else
+ BuildRequires: pkgconfig(gdlib) >= 2.3.3
+ %endif
+@@ -852,9 +860,9 @@
+ # All files licensed under PHP version 3.01
+ License:  PHP-3.01
+ Requires: %{?scl_prefix}php-common%{?_isa} = %{version}-%{release}
+-BuildRequires: pkgconfig(icu-i18n) >= 74
+-BuildRequires: pkgconfig(icu-io)   >= 74
+-BuildRequires: pkgconfig(icu-uc)   >= 74
++BuildRequires: pkgconfig(icu-i18n) >= 73
++BuildRequires: pkgconfig(icu-io)   >= 73
++BuildRequires: pkgconfig(icu-uc)   >= 73
+ 
+ %description intl
+ The %{?scl_prefix}php-intl package contains a dynamic shared object that will add
+@@ -998,6 +1006,9 @@
+ %patch -P47 -p1 -b .phpinfo
+ %patch -P48 -p1 -b .ec-param
+ %patch -P49 -p1 -b .iodbc
++%patch -P50 -p1 -b .ffi-strncmp
++%patch -P51 -p1 -b .openssl-asn1
++%patch -P52 -p1 -b .upload-progress-off
+ 
+ %patch -P91 -p1 -b .remi-oci8
+ 

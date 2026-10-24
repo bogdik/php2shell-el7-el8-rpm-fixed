@@ -1,0 +1,14 @@
+--- a/ext/openssl/xp_ssl.c
++++ b/ext/openssl/xp_ssl.c
+@@ -150,6 +150,11 @@
+ 
+ #if PHP_OPENSSL_API_VERSION < 0x10100
+ static RSA *php_openssl_tmp_rsa_cb(SSL *s, int is_export, int keylength);
++/* openssl.c defines this as static; this file is compiled separately. */
++static const unsigned char *ASN1_STRING_get0_data(const ASN1_STRING *asn1)
++{
++	return M_ASN1_STRING_data(asn1);
++}
+ #endif
+ 
+ extern php_stream* php_openssl_get_stream_from_ssl_handle(const SSL *ssl);

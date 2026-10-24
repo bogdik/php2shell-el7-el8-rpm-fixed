@@ -1,0 +1,8 @@
+id=el7-remi-81
+os=el7
+family=remi
+label=remi php81
+package=php81-php-common
+marker=/root/php81-el7-build
+ready=RPMS/el7/remi/php81-rpm
+nevra_glob=

@@ -1,0 +1,8 @@
+id=el7-remi-83
+os=el7
+family=remi
+label=remi php83, 8.3.36-2, upload_progress off
+package=php83-php-common
+marker=/root/php83-8.3.36-el7
+ready=RPMS/el7/remi/php83-rpm
+nevra_glob=
